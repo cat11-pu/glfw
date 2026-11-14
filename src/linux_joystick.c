@@ -386,39 +386,53 @@ void _glfwTerminateJoysticksLinux(void)
 
 GLFWbool _glfwPollJoystickLinux(_GLFWjoystick* js, int mode)
 {
-    // Read all queued events (non-blocking)
+    // Read all queued events in batches (non-blocking)
     for (;;)
     {
-        struct input_event e;
+        enum { EVENT_BATCH_SIZE = 64 };
+        struct input_event events[EVENT_BATCH_SIZE];
+        ssize_t count, i;
 
-        errno = 0;
-        if (read(js->linjs.fd, &e, sizeof(e)) < 0)
+        count = read(js->linjs.fd, events, sizeof(events));
+        if (count < 0)
         {
+            if (errno == EINTR)
+                continue;
+
             // Reset the joystick slot if the device was disconnected
             if (errno == ENODEV)
                 closeJoystick(js);
 
             break;
         }
+        else if (count == 0)
+            break;
 
-        if (e.type == EV_SYN)
+        count /= sizeof(events[0]);
+
+        for (i = 0;  i < count;  i++)
         {
-            if (e.code == SYN_DROPPED)
-                _glfw.linjs.dropped = GLFW_TRUE;
-            else if (e.code == SYN_REPORT)
+            const struct input_event* e = events + i;
+
+            if (e->type == EV_SYN)
             {
-                _glfw.linjs.dropped = GLFW_FALSE;
-                pollAbsState(js);
+                if (e->code == SYN_DROPPED)
+                    _glfw.linjs.dropped = GLFW_TRUE;
+                else if (e->code == SYN_REPORT)
+                {
+                    _glfw.linjs.dropped = GLFW_FALSE;
+                    pollAbsState(js);
+                }
             }
+
+            if (_glfw.linjs.dropped)
+                continue;
+
+            if (e->type == EV_KEY)
+                handleKeyEvent(js, e->code, e->value);
+            else if (e->type == EV_ABS)
+                handleAbsEvent(js, e->code, e->value);
         }
-
-        if (_glfw.linjs.dropped)
-            continue;
-
-        if (e.type == EV_KEY)
-            handleKeyEvent(js, e.code, e.value);
-        else if (e.type == EV_ABS)
-            handleAbsEvent(js, e.code, e.value);
     }
 
     return js->connected;
