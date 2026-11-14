@@ -247,20 +247,37 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
     const NSRect contentRect = [window->ns.view frame];
     const NSRect fbRect = [window->ns.view convertRectToBacking:contentRect];
 
-    if (fbRect.size.width != window->ns.fbWidth ||
-        fbRect.size.height != window->ns.fbHeight)
-    {
-        window->ns.fbWidth  = fbRect.size.width;
-        window->ns.fbHeight = fbRect.size.height;
-        _glfwInputFramebufferSize(window, fbRect.size.width, fbRect.size.height);
-    }
+    const GLFWbool fbChanged =
+        fbRect.size.width != window->ns.fbWidth ||
+        fbRect.size.height != window->ns.fbHeight;
+    const GLFWbool sizeChanged =
+        contentRect.size.width != window->ns.width ||
+        contentRect.size.height != window->ns.height;
 
-    if (contentRect.size.width != window->ns.width ||
-        contentRect.size.height != window->ns.height)
+    window->ns.fbWidth  = fbRect.size.width;
+    window->ns.fbHeight = fbRect.size.height;
+    window->ns.width    = contentRect.size.width;
+    window->ns.height   = contentRect.size.height;
+
+    if (fbChanged && sizeChanged)
     {
-        window->ns.width  = contentRect.size.width;
-        window->ns.height = contentRect.size.height;
-        _glfwInputWindowSize(window, contentRect.size.width, contentRect.size.height);
+        _glfwInputWindowResize(window,
+                               contentRect.size.width,
+                               contentRect.size.height,
+                               fbRect.size.width,
+                               fbRect.size.height);
+    }
+    else if (fbChanged)
+    {
+        _glfwInputFramebufferSize(window,
+                                  fbRect.size.width,
+                                  fbRect.size.height);
+    }
+    else if (sizeChanged)
+    {
+        _glfwInputWindowSize(window,
+                             contentRect.size.width,
+                             contentRect.size.height);
     }
 }
 
@@ -2088,4 +2105,3 @@ GLFWAPI id glfwGetCocoaView(GLFWwindow* handle)
 }
 
 #endif // _GLFW_COCOA
-

@@ -1041,8 +1041,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
                 window->win32.width = width;
                 window->win32.height = height;
 
-                _glfwInputFramebufferSize(window, width, height);
-                _glfwInputWindowSize(window, width, height);
+                _glfwInputWindowResize(window, width, height, width, height);
             }
 
             if (window->monitor && window->win32.iconified != iconified)
@@ -2581,4 +2580,3 @@ GLFWAPI HWND glfwGetWin32Window(GLFWwindow* handle)
 }
 
 #endif // _GLFW_WIN32
-

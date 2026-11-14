@@ -4449,6 +4449,10 @@ GLFWAPI GLFWwindowmaximizefun glfwSetWindowMaximizeCallback(GLFWwindow* window, 
  *  This function sets the framebuffer resize callback of the specified window,
  *  which is called when the framebuffer of the specified window is resized.
  *
+ *  @note If a resize changes both the window and framebuffer size, this callback
+ *  is called before the window size callback.  Resize events are delivered in
+ *  the order they occur, even if a callback resizes the window.
+ *
  *  @param[in] window The window whose callback to set.
  *  @param[in] callback The new callback, or `NULL` to remove the currently set
  *  callback.
@@ -6574,4 +6578,3 @@ GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow* window
 #endif
 
 #endif /* _glfw3_h_ */
-

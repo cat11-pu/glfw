@@ -27,6 +27,7 @@ add_executable(glfwinfo glfwinfo.c ${GETOPT} ${GLAD_GL} ${GLAD_VULKAN})
 add_executable(iconify iconify.c ${GETOPT} ${GLAD_GL})
 add_executable(monitors monitors.c ${GETOPT} ${GLAD_GL})
 add_executable(reopen reopen.c ${GLAD_GL})
+add_executable(resize resize.c)
 add_executable(cursor cursor.c ${GLAD_GL})
 
 add_executable(empty WIN32 MACOSX_BUNDLE empty.c ${TINYCTHREAD} ${GLAD_GL})
@@ -51,7 +52,7 @@ endif()
 set(GUI_ONLY_BINARIES empty gamma icon inputlag joysticks tearing threads
     timeout title triangle-vulkan window)
 set(CONSOLE_BINARIES allocator clipboard events msaa glfwinfo iconify monitors
-    reopen cursor)
+    reopen resize cursor)
 
 set_target_properties(${GUI_ONLY_BINARIES} ${CONSOLE_BINARIES} PROPERTIES
                       C_STANDARD 99
@@ -83,4 +84,3 @@ if (APPLE)
                           MACOSX_BUNDLE_LONG_VERSION_STRING ${GLFW_VERSION}
                           MACOSX_BUNDLE_INFO_PLIST "${GLFW_SOURCE_DIR}/CMake/Info.plist.in")
 endif()
-

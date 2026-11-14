@@ -498,8 +498,6 @@ static void resizeFramebuffer(_GLFWwindow* window)
 
     if (!window->wl.transparent)
         setContentAreaOpaque(window);
-
-    _glfwInputFramebufferSize(window, window->wl.fbWidth, window->wl.fbHeight);
 }
 
 static GLFWbool resizeWindow(_GLFWwindow* window, int width, int height)
@@ -549,6 +547,12 @@ static GLFWbool resizeWindow(_GLFWwindow* window, int width, int height)
         wl_surface_commit(window->wl.fallback.bottom.surface);
     }
 
+    _glfwInputWindowResize(window,
+                           window->wl.width,
+                           window->wl.height,
+                           window->wl.fbWidth,
+                           window->wl.fbHeight);
+
     return GLFW_TRUE;
 }
 
@@ -580,6 +584,9 @@ void _glfwUpdateBufferScaleFromOutputsWayland(_GLFWwindow* window)
         wl_surface_set_buffer_scale(window->wl.surface, maxScale);
         _glfwInputWindowContentScale(window, maxScale, maxScale);
         resizeFramebuffer(window);
+        _glfwInputFramebufferSize(window,
+                                  window->wl.fbWidth,
+                                  window->wl.fbHeight);
 
         if (window->wl.visible)
             _glfwInputWindowDamage(window);
@@ -709,6 +716,9 @@ void fractionalScaleHandlePreferredScale(void* userData,
     window->wl.scalingNumerator = numerator;
     _glfwInputWindowContentScale(window, numerator / 120.f, numerator / 120.f);
     resizeFramebuffer(window);
+    _glfwInputFramebufferSize(window,
+                              window->wl.fbWidth,
+                              window->wl.fbHeight);
 
     if (window->wl.visible)
         _glfwInputWindowDamage(window);
@@ -828,8 +838,6 @@ static void xdgSurfaceHandleConfigure(void* userData,
 
     if (resizeWindow(window, width, height))
     {
-        _glfwInputWindowSize(window, window->wl.width, window->wl.height);
-
         if (window->wl.visible)
             _glfwInputWindowDamage(window);
     }
@@ -929,7 +937,6 @@ void libdecorFrameHandleConfigure(struct libdecor_frame* frame,
 
     if (resizeWindow(window, width, height))
     {
-        _glfwInputWindowSize(window, window->wl.width, window->wl.height);
         damaged = GLFW_TRUE;
     }
 
@@ -2626,8 +2633,6 @@ void _glfwSetWindowAspectRatioWayland(_GLFWwindow* window, int numer, int denom)
             libdecor_state_free(frameState);
         }
 
-        _glfwInputWindowSize(window, window->wl.width, window->wl.height);
-
         if (window->wl.visible)
             _glfwInputWindowDamage(window);
     }
@@ -3617,4 +3622,3 @@ GLFWAPI struct wl_surface* glfwGetWaylandWindow(GLFWwindow* handle)
 }
 
 #endif // _GLFW_WAYLAND
-

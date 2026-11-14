@@ -1495,13 +1495,11 @@ static void processEvent(XEvent *event)
                 window->x11.width = event->xconfigure.width;
                 window->x11.height = event->xconfigure.height;
 
-                _glfwInputFramebufferSize(window,
-                                          event->xconfigure.width,
-                                          event->xconfigure.height);
-
-                _glfwInputWindowSize(window,
-                                     event->xconfigure.width,
-                                     event->xconfigure.height);
+                _glfwInputWindowResize(window,
+                                       event->xconfigure.width,
+                                       event->xconfigure.height,
+                                       event->xconfigure.width,
+                                       event->xconfigure.height);
             }
 
             int xpos = event->xconfigure.x;
@@ -3384,4 +3382,3 @@ GLFWAPI const char* glfwGetX11SelectionString(void)
 }
 
 #endif // _GLFW_X11
-

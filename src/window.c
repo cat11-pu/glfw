@@ -38,6 +38,71 @@
 //////                         GLFW event API                       //////
 //////////////////////////////////////////////////////////////////////////
 
+struct _GLFWsizeevent
+{
+    _GLFWsizeevent* next;
+    GLFWbool framebuffer;
+    int width;
+    int height;
+};
+
+static void enqueueSizeEvent(_GLFWwindow* window,
+                             GLFWbool framebuffer,
+                             int width,
+                             int height)
+{
+    _GLFWsizeevent* event = _glfw_calloc(1, sizeof(_GLFWsizeevent));
+    if (!event)
+        return;
+
+    event->framebuffer = framebuffer;
+    event->width = width;
+    event->height = height;
+
+    if (window->sizeEvents.tail)
+        window->sizeEvents.tail->next = event;
+    else
+        window->sizeEvents.head = event;
+
+    window->sizeEvents.tail = event;
+}
+
+static void drainSizeEvents(_GLFWwindow* window)
+{
+    if (window->sizeEvents.dispatching)
+        return;
+
+    window->sizeEvents.dispatching = GLFW_TRUE;
+
+    while (window->sizeEvents.head)
+    {
+        _GLFWsizeevent* event = window->sizeEvents.head;
+        window->sizeEvents.head = event->next;
+
+        if (!window->sizeEvents.head)
+            window->sizeEvents.tail = NULL;
+
+        if (event->framebuffer)
+        {
+            if (window->callbacks.fbsize)
+                window->callbacks.fbsize((GLFWwindow*) window,
+                                         event->width,
+                                         event->height);
+        }
+        else
+        {
+            if (window->callbacks.size)
+                window->callbacks.size((GLFWwindow*) window,
+                                       event->width,
+                                       event->height);
+        }
+
+        _glfw_free(event);
+    }
+
+    window->sizeEvents.dispatching = GLFW_FALSE;
+}
+
 // Notifies shared code that a window has lost or received input focus
 //
 void _glfwInputWindowFocus(_GLFWwindow* window, GLFWbool focused)
@@ -89,8 +154,8 @@ void _glfwInputWindowSize(_GLFWwindow* window, int width, int height)
     assert(width >= 0);
     assert(height >= 0);
 
-    if (window->callbacks.size)
-        window->callbacks.size((GLFWwindow*) window, width, height);
+    enqueueSizeEvent(window, GLFW_FALSE, width, height);
+    drainSizeEvents(window);
 }
 
 // Notifies shared code that a window has been iconified or restored
@@ -124,8 +189,25 @@ void _glfwInputFramebufferSize(_GLFWwindow* window, int width, int height)
     assert(width >= 0);
     assert(height >= 0);
 
-    if (window->callbacks.fbsize)
-        window->callbacks.fbsize((GLFWwindow*) window, width, height);
+    enqueueSizeEvent(window, GLFW_TRUE, width, height);
+    drainSizeEvents(window);
+}
+
+// Notifies shared code that a window and its framebuffer have been resized
+//
+void _glfwInputWindowResize(_GLFWwindow* window,
+                            int width, int height,
+                            int fbWidth, int fbHeight)
+{
+    assert(window != NULL);
+    assert(width >= 0);
+    assert(height >= 0);
+    assert(fbWidth >= 0);
+    assert(fbHeight >= 0);
+
+    enqueueSizeEvent(window, GLFW_TRUE, fbWidth, fbHeight);
+    enqueueSizeEvent(window, GLFW_FALSE, width, height);
+    drainSizeEvents(window);
 }
 
 // Notifies shared code that a window content scale has changed
@@ -1195,4 +1277,3 @@ GLFWAPI void glfwPostEmptyEvent(void)
     _GLFW_REQUIRE_INIT();
     _glfw.platform.postEmptyEvent();
 }
-

@@ -79,6 +79,7 @@ typedef struct _GLFWmapping     _GLFWmapping;
 typedef struct _GLFWjoystick    _GLFWjoystick;
 typedef struct _GLFWtls         _GLFWtls;
 typedef struct _GLFWmutex       _GLFWmutex;
+typedef struct _GLFWsizeevent   _GLFWsizeevent;
 
 #define GL_VERSION 0x1f02
 #define GL_NONE 0
@@ -584,6 +585,12 @@ struct _GLFWwindow
         GLFWdropfun               drop;
     } callbacks;
 
+    struct {
+        _GLFWsizeevent*           head;
+        _GLFWsizeevent*           tail;
+        GLFWbool                  dispatching;
+    } sizeEvents;
+
     // This is defined in platform.h
     GLFW_PLATFORM_WINDOW_STATE
 };
@@ -923,6 +930,9 @@ void _glfwInputWindowFocus(_GLFWwindow* window, GLFWbool focused);
 void _glfwInputWindowPos(_GLFWwindow* window, int xpos, int ypos);
 void _glfwInputWindowSize(_GLFWwindow* window, int width, int height);
 void _glfwInputFramebufferSize(_GLFWwindow* window, int width, int height);
+void _glfwInputWindowResize(_GLFWwindow* window,
+                            int width, int height,
+                            int fbWidth, int fbHeight);
 void _glfwInputWindowContentScale(_GLFWwindow* window,
                                   float xscale, float yscale);
 void _glfwInputWindowIconify(_GLFWwindow* window, GLFWbool iconified);
@@ -1020,4 +1030,3 @@ int _glfw_max(int a, int b);
 void* _glfw_calloc(size_t count, size_t size);
 void* _glfw_realloc(void* pointer, size_t size);
 void _glfw_free(void* pointer);
-

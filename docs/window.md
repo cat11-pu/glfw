@@ -724,6 +724,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 ```
 
+If a resize changes both the window and framebuffer size, the framebuffer size
+callback is called before the window size callback.  Resize events are delivered
+in the order they occur, even if a callback resizes the window.
+
 There is also @ref glfwGetFramebufferSize for directly retrieving the current
 size of the framebuffer of a window.
 
@@ -1539,4 +1543,3 @@ A context that supports either the `WGL_EXT_swap_control_tear` or the
 which allows the driver to swap immediately even if a frame arrives a little bit
 late.  This trades the risk of visible tears for greater framerate stability.
 You can check for these extensions with @ref glfwExtensionSupported.
-
