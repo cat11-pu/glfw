@@ -558,6 +558,8 @@ struct _GLFWwindow
     int                 cursorMode;
     char                mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];
     char                keys[GLFW_KEY_LAST + 1];
+    // Timestamp of the most recent input event, in timer units
+    uint64_t            inputEventTime;
     // Virtual cursor position when cursor is disabled
     double              virtualCursorPosX, virtualCursorPosY;
     GLFWbool            rawMouseMotion;
@@ -801,6 +803,18 @@ struct _GLFWlibrary
         GLFW_PLATFORM_LIBRARY_TIMER_STATE
     } timer;
 
+    // Timestamp of the platform event currently being dispatched, in timer
+    // units, or zero if the platform provided no timestamp for it
+    uint64_t            eventTime;
+
+    // Calibration state for platform event timestamps in milliseconds
+    struct {
+        GLFWbool        initialized;
+        uint32_t        lastRaw;
+        uint64_t        base;
+        int64_t         offset;
+    } eventClock;
+
     struct {
         EGLenum         platform;
         EGLDisplay      display;
@@ -948,6 +962,16 @@ void _glfwInputJoystickHat(_GLFWjoystick* js, int hat, char value);
 void _glfwInputMonitor(_GLFWmonitor* monitor, int action, int placement);
 void _glfwInputMonitorWindow(_GLFWmonitor* monitor, _GLFWwindow* window);
 
+// Sets the timestamp of the platform event currently being dispatched,
+// converting a platform-specific millisecond timestamp to timer units
+void _glfwSetEventTime(uint32_t time);
+// Sets the timestamp of the platform event currently being dispatched,
+// from a value already in timer units
+void _glfwSetEventTimeAbsolute(uint64_t time);
+// Seeds the event clock offset from a current reading of the platform
+// event clock, for platforms where it differs from the timer clock domain
+void _glfwSeedEventClock(uint32_t time);
+
 #if defined(__GNUC__)
 void _glfwInputError(int code, const char* format, ...)
     __attribute__((format(printf, 2, 3)));
@@ -1020,4 +1044,3 @@ int _glfw_max(int a, int b);
 void* _glfw_calloc(size_t count, size_t size);
 void* _glfw_realloc(void* pointer, size_t size);
 void _glfw_free(void* pointer);
-

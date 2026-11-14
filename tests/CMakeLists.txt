@@ -21,6 +21,7 @@ set(TINYCTHREAD "${GLFW_SOURCE_DIR}/deps/tinycthread.h"
 
 add_executable(allocator allocator.c ${GLAD_GL})
 add_executable(clipboard clipboard.c ${GETOPT} ${GLAD_GL})
+add_executable(eventtime eventtime.c ${GLAD_GL})
 add_executable(events events.c ${GETOPT} ${GLAD_GL})
 add_executable(msaa msaa.c ${GETOPT} ${GLAD_GL})
 add_executable(glfwinfo glfwinfo.c ${GETOPT} ${GLAD_GL} ${GLAD_VULKAN})
@@ -41,17 +42,30 @@ add_executable(title WIN32 MACOSX_BUNDLE title.c ${GLAD_GL})
 add_executable(triangle-vulkan WIN32 triangle-vulkan.c ${GLAD_VULKAN})
 add_executable(window WIN32 MACOSX_BUNDLE window.c ${GLAD_GL})
 
+# The eventtime_inject test uses internal GLFW symbols and so requires a
+# static library build
+if (NOT GLFW_BUILD_SHARED_LIBRARY)
+    add_executable(eventtime_inject eventtime_inject.c)
+endif()
+
 target_link_libraries(empty Threads::Threads)
 target_link_libraries(threads Threads::Threads)
 if (RT_LIBRARY)
     target_link_libraries(empty "${RT_LIBRARY}")
     target_link_libraries(threads "${RT_LIBRARY}")
+    if (TARGET eventtime_inject)
+        target_link_libraries(eventtime_inject "${RT_LIBRARY}")
+    endif()
 endif()
 
 set(GUI_ONLY_BINARIES empty gamma icon inputlag joysticks tearing threads
     timeout title triangle-vulkan window)
 set(CONSOLE_BINARIES allocator clipboard events msaa glfwinfo iconify monitors
-    reopen cursor)
+    reopen cursor eventtime)
+
+if (TARGET eventtime_inject)
+    list(APPEND CONSOLE_BINARIES eventtime_inject)
+endif()
 
 set_target_properties(${GUI_ONLY_BINARIES} ${CONSOLE_BINARIES} PROPERTIES
                       C_STANDARD 99
@@ -83,4 +97,3 @@ if (APPLE)
                           MACOSX_BUNDLE_LONG_VERSION_STRING ${GLFW_VERSION}
                           MACOSX_BUNDLE_INFO_PLIST "${GLFW_SOURCE_DIR}/CMake/Info.plist.in")
 endif()
-

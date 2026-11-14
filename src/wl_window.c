@@ -1449,6 +1449,10 @@ static void handleEvents(double* timeout)
             {
                 if (_glfw.wl.keyboardFocus)
                 {
+                    // These key presses are synthesized by GLFW and have no
+                    // native timestamp, so fall back to the current time
+                    _glfw.eventTime = 0;
+
                     for (uint64_t i = 0; i < repeats; i++)
                     {
                         _glfwInputKey(_glfw.wl.keyboardFocus,
@@ -1634,6 +1638,8 @@ static void pointerHandleEnter(void* userData,
     }
     else
     {
+        // This event carries no native timestamp
+        _glfw.eventTime = 0;
         processPointerEnterSurface(surface);
         processPointerMotion(xpos, ypos);
     }
@@ -1658,7 +1664,11 @@ static void pointerHandleLeave(void* userData,
         _glfw.wl.pending.pointerSurface = NULL;
     }
     else
+    {
+        // This event carries no native timestamp
+        _glfw.eventTime = 0;
         processPointerLeaveSurface(surface);
+    }
 }
 
 static void pointerHandleMotion(void* userData,
@@ -1678,9 +1688,13 @@ static void pointerHandleMotion(void* userData,
         _glfw.wl.pending.events |= GLFW_PENDING_MOTION;
         _glfw.wl.pending.pointerX = xpos;
         _glfw.wl.pending.pointerY = ypos;
+        _glfw.wl.pending.time = time;
     }
     else
+    {
+        _glfwSetEventTime(time);
         processPointerMotion(xpos, ypos);
+    }
 }
 
 static void pointerHandleButton(void* userData,
@@ -1710,9 +1724,13 @@ static void pointerHandleButton(void* userData,
         _glfw.wl.pending.events |= GLFW_PENDING_BUTTON;
         _glfw.wl.pending.button = button;
         _glfw.wl.pending.action = action;
+        _glfw.wl.pending.time = time;
     }
     else
+    {
+        _glfwSetEventTime(time);
         processPointerButton(button, action);
+    }
 }
 
 static void pointerHandleAxis(void* userData,
@@ -1727,6 +1745,7 @@ static void pointerHandleAxis(void* userData,
     if (wl_pointer_get_version(pointer) >= WL_POINTER_FRAME_SINCE_VERSION)
     {
         _glfw.wl.pending.events |= GLFW_PENDING_SCROLL;
+        _glfw.wl.pending.time = time;
         if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
             _glfw.wl.pending.scrollX = -wl_fixed_to_double(value) / 10.0;
         else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL)
@@ -1734,6 +1753,8 @@ static void pointerHandleAxis(void* userData,
     }
     else
     {
+        _glfwSetEventTime(time);
+
         // NOTE: 10 units of motion per mouse wheel step seems to be a common ratio
         if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
             processPointerScroll(-wl_fixed_to_double(value) / 10.0, 0.0);
@@ -1744,6 +1765,13 @@ static void pointerHandleAxis(void* userData,
 
 static void pointerHandleFrame(void* userData, struct wl_pointer* pointer)
 {
+    // Events accumulated since the last frame share the most recent
+    // timestamp reported by the compositor, if any
+    if (_glfw.wl.pending.time)
+        _glfwSetEventTime(_glfw.wl.pending.time);
+    else
+        _glfw.eventTime = 0;
+
     if (_glfw.wl.pending.events & GLFW_PENDING_SURFACE)
     {
         if (_glfw.wl.pointerSurface)
@@ -1992,6 +2020,8 @@ static void keyboardHandleKey(void* userData,
     {
         timerfd_settime(_glfw.wl.keyRepeatTimerfd, 0, &timer, NULL);
     }
+
+    _glfwSetEventTime(time);
 
     _glfwInputKey(window, key, scancode, action, _glfw.wl.xkb.modifiers);
 
@@ -3181,6 +3211,9 @@ static void relativePointerHandleRelativeMotion(void* userData,
 
     if (window->cursorMode != GLFW_CURSOR_DISABLED)
         return;
+
+    // This event carries no native timestamp
+    _glfw.eventTime = 0;
 
     if (window->rawMouseMotion)
     {

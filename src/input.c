@@ -267,6 +267,96 @@ static GLFWbool parseMapping(_GLFWmapping* mapping, const char* string)
 //////                         GLFW event API                       //////
 //////////////////////////////////////////////////////////////////////////
 
+// Records the time of the current input event for the specified window,
+// keeping the recorded time monotonically non-decreasing per window
+//
+static void updateInputEventTime(_GLFWwindow* window)
+{
+    uint64_t time = _glfw.eventTime;
+    if (!time)
+        time = _glfwPlatformGetTimerValue();
+
+    if (time > window->inputEventTime)
+        window->inputEventTime = time;
+}
+
+// Notifies shared code of the timestamp of the platform event currently
+// being dispatched, as a value already in timer units
+//
+void _glfwSetEventTimeAbsolute(uint64_t time)
+{
+    const uint64_t now = _glfwPlatformGetTimerValue();
+    if (time > now)
+        time = now;
+
+    _glfw.eventTime = time;
+}
+
+// Notifies shared code of the timestamp of the platform event currently
+// being dispatched, as a 32-bit millisecond timestamp in the platform event
+// clock domain, converting it to timer units
+//
+void _glfwSetEventTime(uint32_t time)
+{
+    const uint64_t frequency = _glfwPlatformGetTimerFrequency();
+    const uint64_t now = _glfwPlatformGetTimerValue();
+
+    if (!_glfw.eventClock.initialized)
+    {
+        _glfw.eventClock.initialized = GLFW_TRUE;
+        _glfw.eventClock.base = 0;
+        _glfw.eventClock.lastRaw = time;
+    }
+    else
+    {
+        // Widen the 32-bit millisecond counter across wraparound, which
+        // happens roughly every 49.7 days
+        if (time < _glfw.eventClock.lastRaw &&
+            _glfw.eventClock.lastRaw - time > 0x80000000u)
+        {
+            _glfw.eventClock.base += (uint64_t) 1 << 32;
+        }
+
+        _glfw.eventClock.lastRaw = time;
+    }
+
+    const uint64_t raw = (_glfw.eventClock.base + time) * frequency / 1000;
+    int64_t converted = (int64_t) raw + _glfw.eventClock.offset;
+
+    if (converted > (int64_t) now)
+    {
+        if (converted > (int64_t) now + (int64_t) frequency)
+        {
+            // The timestamp is unexpectedly far in the future, so assume the
+            // event clock domain has changed and recalibrate against the timer
+            _glfw.eventClock.offset = (int64_t) now - (int64_t) raw;
+        }
+
+        // Never report a timestamp from the future
+        converted = (int64_t) now;
+    }
+
+    if (converted < 0)
+        converted = 0;
+
+    _glfw.eventTime = (uint64_t) converted;
+}
+
+// Seeds the event clock offset from a current reading of the platform event
+// clock, for platforms where it differs from the timer clock domain
+//
+void _glfwSeedEventClock(uint32_t time)
+{
+    const uint64_t frequency = _glfwPlatformGetTimerFrequency();
+
+    _glfw.eventClock.initialized = GLFW_TRUE;
+    _glfw.eventClock.base = 0;
+    _glfw.eventClock.lastRaw = time;
+    _glfw.eventClock.offset =
+        (int64_t) _glfwPlatformGetTimerValue() -
+        (int64_t) ((uint64_t) time * frequency / 1000);
+}
+
 // Notifies shared code of a physical key event
 //
 void _glfwInputKey(_GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -299,6 +389,8 @@ void _glfwInputKey(_GLFWwindow* window, int key, int scancode, int action, int m
     if (!window->lockKeyMods)
         mods &= ~(GLFW_MOD_CAPS_LOCK | GLFW_MOD_NUM_LOCK);
 
+    updateInputEventTime(window);
+
     if (window->callbacks.key)
         window->callbacks.key((GLFWwindow*) window, key, scancode, action, mods);
 }
@@ -318,6 +410,8 @@ void _glfwInputChar(_GLFWwindow* window, uint32_t codepoint, int mods, GLFWbool 
     if (!window->lockKeyMods)
         mods &= ~(GLFW_MOD_CAPS_LOCK | GLFW_MOD_NUM_LOCK);
 
+    updateInputEventTime(window);
+
     if (window->callbacks.charmods)
         window->callbacks.charmods((GLFWwindow*) window, codepoint, mods);
 
@@ -335,6 +429,8 @@ void _glfwInputScroll(_GLFWwindow* window, double xoffset, double yoffset)
     assert(window != NULL);
     assert(isfinite(xoffset));
     assert(isfinite(yoffset));
+
+    updateInputEventTime(window);
 
     if (window->callbacks.scroll)
         window->callbacks.scroll((GLFWwindow*) window, xoffset, yoffset);
@@ -354,6 +450,8 @@ void _glfwInputMouseClick(_GLFWwindow* window, int button, int action, int mods)
 
     if (!window->lockKeyMods)
         mods &= ~(GLFW_MOD_CAPS_LOCK | GLFW_MOD_NUM_LOCK);
+
+    updateInputEventTime(window);
 
     if (button <= GLFW_MOUSE_BUTTON_LAST)
     {
@@ -382,6 +480,8 @@ void _glfwInputCursorPos(_GLFWwindow* window, double xpos, double ypos)
     window->virtualCursorPosX = xpos;
     window->virtualCursorPosY = ypos;
 
+    updateInputEventTime(window);
+
     if (window->callbacks.cursorPos)
         window->callbacks.cursorPos((GLFWwindow*) window, xpos, ypos);
 }
@@ -392,6 +492,8 @@ void _glfwInputCursorEnter(_GLFWwindow* window, GLFWbool entered)
 {
     assert(window != NULL);
     assert(entered == GLFW_TRUE || entered == GLFW_FALSE);
+
+    updateInputEventTime(window);
 
     if (window->callbacks.cursorEnter)
         window->callbacks.cursorEnter((GLFWwindow*) window, entered);
@@ -1517,3 +1619,16 @@ GLFWAPI uint64_t glfwGetTimerFrequency(void)
     return _glfwPlatformGetTimerFrequency();
 }
 
+GLFWAPI double glfwGetInputEventTime(GLFWwindow* handle)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
+
+    _GLFW_REQUIRE_INIT_OR_RETURN(0.0);
+
+    if (!window->inputEventTime)
+        return 0.0;
+
+    return (double) (int64_t) (window->inputEventTime - _glfw.timer.offset) /
+        _glfwPlatformGetTimerFrequency();
+}

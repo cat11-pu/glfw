@@ -5,6 +5,13 @@
 
 ## New features {#features}
 
+### Input event timestamps {#input_event_timestamps}
+
+GLFW now provides the time each input event occurred via the new @ref
+glfwGetInputEventTime function.  The time has millisecond resolution, shares
+its clock and zero point with @ref glfwGetTime and is monotonically
+non-decreasing per window, including across window focus changes.
+
 ## Caveats {#caveats}
 
 ## Deprecations {#deprecations}
@@ -14,6 +21,8 @@
 ## New symbols {#new_symbols}
 
 ### New functions {#new_functions}
+
+- @ref glfwGetInputEventTime
 
 ### New types {#new_types}
 
@@ -27,4 +36,3 @@
 - [Release notes for 3.2](https://www.glfw.org/docs/3.2/news.html)
 - [Release notes for 3.1](https://www.glfw.org/docs/3.1/news.html)
 - [Release notes for 3.0](https://www.glfw.org/docs/3.0/news.html)
-

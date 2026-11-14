@@ -1542,6 +1542,17 @@ GLFWbool _glfwRawMouseMotionSupportedCocoa(void)
     return GLFW_FALSE;
 }
 
+// Records the timestamp of the specified event as the current event time
+//
+static void updateEventTime(NSEvent* event)
+{
+    // NSEvent timestamps are in seconds since system startup, the same
+    // clock domain as mach_absolute_time used by the GLFW timer
+    const uint64_t time =
+        (uint64_t) ([event timestamp] * _glfwPlatformGetTimerFrequency());
+    _glfwSetEventTimeAbsolute(time);
+}
+
 void _glfwPollEventsCocoa(void)
 {
     @autoreleasepool {
@@ -1555,6 +1566,7 @@ void _glfwPollEventsCocoa(void)
         if (event == nil)
             break;
 
+        updateEventTime(event);
         [NSApp sendEvent:event];
     }
 
@@ -1572,6 +1584,9 @@ void _glfwWaitEventsCocoa(void)
                                         untilDate:[NSDate distantFuture]
                                            inMode:NSDefaultRunLoopMode
                                           dequeue:YES];
+    if (event)
+        updateEventTime(event);
+
     [NSApp sendEvent:event];
 
     _glfwPollEventsCocoa();
@@ -1589,7 +1604,10 @@ void _glfwWaitEventsTimeoutCocoa(double timeout)
                                            inMode:NSDefaultRunLoopMode
                                           dequeue:YES];
     if (event)
+    {
+        updateEventTime(event);
         [NSApp sendEvent:event];
+    }
 
     _glfwPollEventsCocoa();
 

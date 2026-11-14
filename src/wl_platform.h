@@ -501,6 +501,7 @@ typedef struct _GLFWlibraryWayland
         double                  discreteY;
         int                     button;
         int                     action;
+        uint32_t                time;
     } pending;
 
     struct {
@@ -733,4 +734,3 @@ void _glfwAddSeatListenerWayland(struct wl_seat* seat);
 void _glfwAddDataDeviceListenerWayland(struct wl_data_device* device);
 
 GLFWbool _glfwWaitForEGLFrameWayland(_GLFWwindow* window);
-

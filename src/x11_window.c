@@ -1152,6 +1152,10 @@ static void processEvent(XEvent *event)
     int keycode = 0;
     Bool filtered = False;
 
+    // Clear the event time so events without a native timestamp fall back
+    // to the current time when dispatched
+    _glfw.eventTime = 0;
+
     // HACK: Save scancode as some IMs clear the field in XFilterEvent
     if (event->type == KeyPress || event->type == KeyRelease)
         keycode = event->xkey.keycode;
@@ -1250,6 +1254,8 @@ static void processEvent(XEvent *event)
             const int mods = translateState(event->xkey.state);
             const int plain = !(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT));
 
+            _glfwSetEventTime(event->xkey.time);
+
             if (window->x11.ic)
             {
                 // HACK: Do not report the key press events duplicated by XIM
@@ -1321,6 +1327,8 @@ static void processEvent(XEvent *event)
             const int key = translateKey(keycode);
             const int mods = translateState(event->xkey.state);
 
+            _glfwSetEventTime(event->xkey.time);
+
             if (!_glfw.x11.xkb.detectable)
             {
                 // HACK: Key repeat events will arrive as KeyRelease/KeyPress
@@ -1361,6 +1369,8 @@ static void processEvent(XEvent *event)
         {
             const int mods = translateState(event->xbutton.state);
 
+            _glfwSetEventTime(event->xbutton.time);
+
             if (event->xbutton.button == Button1)
                 _glfwInputMouseClick(window, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, mods);
             else if (event->xbutton.button == Button2)
@@ -1394,6 +1404,8 @@ static void processEvent(XEvent *event)
         case ButtonRelease:
         {
             const int mods = translateState(event->xbutton.state);
+
+            _glfwSetEventTime(event->xbutton.time);
 
             if (event->xbutton.button == Button1)
             {
@@ -1435,6 +1447,8 @@ static void processEvent(XEvent *event)
             const int x = event->xcrossing.x;
             const int y = event->xcrossing.y;
 
+            _glfwSetEventTime(event->xcrossing.time);
+
             // HACK: This is a workaround for WMs (KWM, Fluxbox) that otherwise
             //       ignore the defined cursor for hidden cursor mode
             if (window->cursorMode == GLFW_CURSOR_HIDDEN)
@@ -1450,6 +1464,8 @@ static void processEvent(XEvent *event)
 
         case LeaveNotify:
         {
+            _glfwSetEventTime(event->xcrossing.time);
+
             _glfwInputCursorEnter(window, GLFW_FALSE);
             return;
         }
@@ -1458,6 +1474,8 @@ static void processEvent(XEvent *event)
         {
             const int x = event->xmotion.x;
             const int y = event->xmotion.y;
+
+            _glfwSetEventTime(event->xmotion.time);
 
             if (x != window->x11.warpCursorPosX ||
                 y != window->x11.warpCursorPosY)

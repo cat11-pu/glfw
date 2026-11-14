@@ -6089,6 +6089,37 @@ GLFWAPI uint64_t glfwGetTimerValue(void);
  */
 GLFWAPI uint64_t glfwGetTimerFrequency(void);
 
+/*! @brief Returns the time of the most recent input event for the window.
+ *
+ *  This function returns the time, in seconds, of the most recent key, mouse
+ *  button, cursor position, cursor enter/leave or scroll event for the
+ *  specified window.  When called from within one of the corresponding
+ *  callbacks, it returns the time of the event currently being processed.
+ *
+ *  The time shares its clock and zero point with @ref glfwGetTime, so event
+ *  times can be compared directly with frame times measured with that
+ *  function.  Where the platform provides a timestamp for the event, that is
+ *  used.  Otherwise the time the event was processed by GLFW is used.  Event
+ *  times have millisecond resolution and are monotonically non-decreasing
+ *  per window, including across window focus changes.
+ *
+ *  @param[in] window The window to query.
+ *  @return The time, in seconds, of the most recent input event, or zero if
+ *  no input event has been received yet or an
+ *  [error](@ref error_handling) occurred.
+ *
+ *  @errors Possible errors include @ref GLFW_NOT_INITIALIZED.
+ *
+ *  @thread_safety This function must only be called from the main thread.
+ *
+ *  @sa @ref glfwGetTime
+ *
+ *  @since Added in version 3.6.
+ *
+ *  @ingroup input
+ */
+GLFWAPI double glfwGetInputEventTime(GLFWwindow* window);
+
 /*! @brief Makes the context of the specified window current for the calling
  *  thread.
  *

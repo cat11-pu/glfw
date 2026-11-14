@@ -36,6 +36,10 @@
 void _glfwPlatformInitTimer(void)
 {
     QueryPerformanceFrequency((LARGE_INTEGER*) &_glfw.timer.win32.frequency);
+
+    // The message clock used by GetMessageTime runs in a different clock
+    // domain than the performance counter, so seed the event clock offset
+    _glfwSeedEventClock((uint32_t) GetTickCount64());
 }
 
 uint64_t _glfwPlatformGetTimerValue(void)

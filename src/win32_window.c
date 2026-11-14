@@ -552,6 +552,9 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
         return DefWindowProcW(hWnd, uMsg, wParam, lParam);
     }
 
+    // Record the time this message was posted as the event time
+    _glfwSetEventTime((uint32_t) GetMessageTime());
+
     switch (uMsg)
     {
         case WM_MOUSEACTIVATE:
@@ -2122,6 +2125,10 @@ void _glfwPollEventsWin32(void)
     //       Other Win hotkeys are handled implicitly by _glfwInputWindowFocus
     //       because they change the input focus
     // NOTE: The other half of this is in the WM_*KEY* handler in windowProc
+    //
+    // These synthesized key releases have no message timestamp
+    _glfw.eventTime = 0;
+
     handle = GetActiveWindow();
     if (handle)
     {

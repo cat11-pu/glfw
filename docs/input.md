@@ -948,6 +948,31 @@ frequency, in Hz, with @ref glfwGetTimerFrequency.
 uint64_t frequency = glfwGetTimerFrequency();
 ```
 
+### Input event time {#input_event_time}
+
+The time each input event occurred can be queried with @ref
+glfwGetInputEventTime.  When called from within a key, mouse button, cursor
+position, cursor enter/leave or scroll callback, it returns the time of the
+event currently being processed.  At any other time it returns the time of
+the most recent input event for that window.
+
+```c
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    double event_seconds = glfwGetInputEventTime(window);
+}
+```
+
+The returned time is in seconds and shares its clock and zero point with
+@ref glfwGetTime, so event times can be compared directly with frame times
+measured with that function.  Event times have millisecond resolution and
+are monotonically non-decreasing per window, including across window focus
+changes.
+
+Where the platform provides a timestamp for the event, that is used.
+Otherwise the time the event was processed by GLFW is used.  If no input
+event has been received yet, the function returns zero.
+
 
 ## Clipboard input and output {#clipboard}
 
@@ -997,4 +1022,3 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 The path array and its strings are only valid until the file drop callback
 returns, as they may have been generated specifically for that event.  You need
 to make a deep copy of the array if you want to keep the paths.
-
